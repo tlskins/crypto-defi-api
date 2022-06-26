@@ -42,7 +42,7 @@ type MarketInfo struct {
 }
 
 type Fee struct {
-	Amount int     `json:"amount"`
+	Amount float64 `json:"amount"`
 	Mint   string  `json:"mint"`
 	Pct    float64 `json:"pct"`
 }

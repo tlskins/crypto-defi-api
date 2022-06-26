@@ -89,6 +89,7 @@ func main() {
 					}
 
 					(*outQuote)[inputAmount] = out.BestQuote().Price(outTkn)
+					log.Printf("Quoted: %v %s @ %f %s\n", inputAmount, inTkn.Symbol, (*outQuote)[inputAmount], outTkn.Symbol)
 				}(inTkn, outTkn, inputAmount, &outQuote)
 			}
 		}
@@ -97,30 +98,36 @@ func main() {
 
 	// check quotes against alerts
 	for _, tracker := range trackers {
+		log.Printf("Checking tracker %s for %s\n", tracker.Id, tracker.TokenInfo.Symbol)
 		if tracker.LastSnapshot == nil {
 			tracker.LastSnapshot = make(map[string]*t.TokenSnapshot)
 		}
 		activeAlerts := map[string]string{}
 
 		for _, tgtTkn := range tracker.TargetTokens() {
+			log.Printf("Checking target token %s\n", tgtTkn.Symbol)
 			lastSnap := tracker.LastSnapshot[tgtTkn.Symbol]
 			bestPrice := quotes[tracker.TokenInfo][tgtTkn][tracker.InputAmount]
 
 			// check quote against last snap settings
 			lastSettings := tracker.LastSnapAlertSettings[tgtTkn.Symbol]
 			if lastSettings != nil {
+				log.Println("Checking against last settings\n")
+				spew.Dump(lastSettings)
+				spew.Dump(lastSettings.FixedPriceChange, bestPrice, lastSnap.Price, lastSettings.FixedPriceChange)
+
 				if lastSnap == nil ||
 					lastSettings.FixedPriceChange > 0 && bestPrice >= lastSnap.Price+lastSettings.FixedPriceChange ||
 					lastSettings.FixedPriceChange > 0 && bestPrice <= lastSnap.Price-lastSettings.FixedPriceChange ||
 					lastSettings.PctPriceChange > 0 && bestPrice >= lastSnap.Price*(1.0+lastSettings.PctPriceChange) ||
 					lastSettings.PctPriceChange > 0 && bestPrice <= lastSnap.Price*(1.0-lastSettings.PctPriceChange) {
-
 					activeAlerts[tgtTkn.Symbol] = AlertMsg(tracker, tgtTkn, bestPrice, lastSettings.Decimals)
 					tracker.LastSnapshot[tgtTkn.Symbol] = &t.TokenSnapshot{
 						TokenInfo: tgtTkn,
 						Price:     bestPrice,
 						At:        time.Now(),
 					}
+					log.Printf("Alerting %s\n", activeAlerts[tgtTkn.Symbol])
 					continue
 				}
 			}
@@ -128,6 +135,9 @@ func main() {
 			// check quote against absolute settings
 			absSettings := tracker.AbsoluteAlertSettings[tgtTkn.Symbol]
 			if absSettings != nil {
+				log.Println("Checking against abs settings\n")
+				spew.Dump(absSettings)
+
 				if bestPrice >= absSettings.PriceAbove ||
 					bestPrice <= absSettings.PriceBelow {
 
@@ -137,6 +147,7 @@ func main() {
 						Price:     bestPrice,
 						At:        time.Now(),
 					}
+					log.Printf("Alerting %s\n", activeAlerts[tgtTkn.Symbol])
 					continue
 				}
 			}
