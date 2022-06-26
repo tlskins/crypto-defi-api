@@ -6,7 +6,7 @@ type TokenTracker struct {
 	Id                    string                            `bson:"_id" json:"id"`
 	TokenInfo             *TokenInfo                        `bson:"tokenInfo" json:"tokenInfo"`
 	DiscordId             string                            `bson:"discordId" json:"discordId"`
-	InputAmount           int                               `json:"inputAmount" json:"inputAmount"`
+	InputAmount           int                               `json:"inputAmount" json:"inputAmount"` // unused rn
 	LastSnapshot          map[string]*TokenSnapshot         `bson:"lastSnapshot" json:"lastSnapshot"`
 	LastSnapAlertSettings map[string]*LastSnapAlertSettings `bson:"lastSnapAlertSettings" json:"lastSnapAlertSettings"`
 	AbsoluteAlertSettings map[string]*AbsoluteAlertSettings `bson:"absoluteAlertSettings" json:"absoluteAlertSettings"`

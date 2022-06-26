@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -34,14 +35,15 @@ func main() {
 	client := api.NewHttpClient()
 
 	// FOXY @ 0.0034 (1 USDC = 281 FOXY)
-	AlertMsg := func(inTkn, tgtTkn *t.TokenInfo, bestPrice float64, decimals int) string {
+	AlertMsg := func(tracker *t.TokenTracker, tgtTkn *t.TokenInfo, bestPrice float64, decimals int) string {
 		return fmt.Sprintf(
-			"%s @ %s (1 %s = %s %s)",
-			inTkn.Symbol,
+			"%v %s @ %s (1 %s = %s %s)",
+			tracker.InputAmount,
+			tracker.TokenInfo.Symbol,
 			api.RoundToStr(bestPrice, decimals),
 			tgtTkn.Symbol,
 			fmt.Sprintf("%.4f", 1/bestPrice),
-			inTkn.Symbol,
+			tracker.TokenInfo.Symbol,
 		)
 	}
 
@@ -51,33 +53,58 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, tracker := range trackers {
-		if tracker.TokenInfo == nil {
-			log.Fatalf("Token for tracker %s not found", tracker.Id)
-		}
 
+	// aggregate all quotes needed
+	quotes := map[*t.TokenInfo]map[*t.TokenInfo]map[int]float64{}
+	for _, tracker := range trackers {
+		for _, tgtTkn := range tracker.TargetTokens() {
+			if quotes[tracker.TokenInfo] == nil {
+				quotes[tracker.TokenInfo] = make(map[*t.TokenInfo]map[int]float64)
+			}
+			if quotes[tracker.TokenInfo][tgtTkn] == nil {
+				quotes[tracker.TokenInfo][tgtTkn] = make(map[int]float64)
+			}
+			quotes[tracker.TokenInfo][tgtTkn][tracker.InputAmount] = 0.0
+		}
+	}
+
+	// multi thread get quotes
+	var wg sync.WaitGroup
+	for inTkn, outMap := range quotes {
+		for outTkn, outQuote := range outMap {
+			for inputAmount := range outQuote {
+				wg.Add(1)
+				go func(inTkn, outTkn *t.TokenInfo, inputAmount int, outQuote *map[int]float64) {
+					defer wg.Done()
+					log.Printf("Quoting %s to %s\n", inTkn.Symbol, outTkn.Symbol)
+					params := map[string]string{
+						"inputMint":  inTkn.Address,
+						"outputMint": outTkn.Address,
+						"amount":     fmt.Sprintf("%.0f", float64(inputAmount)*math.Pow(10, float64(inTkn.Decimals))),
+						"slippage":   "0.2",
+					}
+					out := &t.JupResp{}
+					if err = api.HttpGetRequest(client, "GET", "https://quote-api.jup.ag/v1/quote", nil, params, out); err != nil {
+						log.Fatal(err)
+					}
+
+					(*outQuote)[inputAmount] = out.BestQuote().Price(outTkn)
+				}(inTkn, outTkn, inputAmount, &outQuote)
+			}
+		}
+	}
+	wg.Wait()
+
+	// check quotes against alerts
+	for _, tracker := range trackers {
 		if tracker.LastSnapshot == nil {
 			tracker.LastSnapshot = make(map[string]*t.TokenSnapshot)
 		}
 		activeAlerts := map[string]string{}
 
-		// get current quotes
 		for _, tgtTkn := range tracker.TargetTokens() {
-			log.Printf("Quoting %s to %s\n", tracker.TokenInfo.Symbol, tgtTkn.Symbol)
-			params := map[string]string{
-				"inputMint":  tracker.TokenInfo.Address,
-				"outputMint": tgtTkn.Address,
-				"amount":     fmt.Sprintf("%.0f", float64(tracker.InputAmount)*math.Pow(10, float64(tracker.TokenInfo.Decimals))),
-				"slippage":   "0.2",
-			}
-			out := &t.JupResp{}
-			if err = api.HttpGetRequest(client, "GET", "https://quote-api.jup.ag/v1/quote", nil, params, out); err != nil {
-				log.Fatal(err)
-			}
-
-			bestQuote := out.BestQuote()
-			bestPrice := bestQuote.Price(tgtTkn)
 			lastSnap := tracker.LastSnapshot[tgtTkn.Symbol]
+			bestPrice := quotes[tracker.TokenInfo][tgtTkn][tracker.InputAmount]
 
 			// check quote against last snap settings
 			lastSettings := tracker.LastSnapAlertSettings[tgtTkn.Symbol]
@@ -88,7 +115,7 @@ func main() {
 					lastSettings.PctPriceChange > 0 && bestPrice >= lastSnap.Price*(1.0+lastSettings.PctPriceChange) ||
 					lastSettings.PctPriceChange > 0 && bestPrice <= lastSnap.Price*(1.0-lastSettings.PctPriceChange) {
 
-					activeAlerts[tgtTkn.Symbol] = AlertMsg(tracker.TokenInfo, tgtTkn, bestPrice, lastSettings.Decimals)
+					activeAlerts[tgtTkn.Symbol] = AlertMsg(tracker, tgtTkn, bestPrice, lastSettings.Decimals)
 					tracker.LastSnapshot[tgtTkn.Symbol] = &t.TokenSnapshot{
 						TokenInfo: tgtTkn,
 						Price:     bestPrice,
@@ -104,7 +131,7 @@ func main() {
 				if bestPrice >= absSettings.PriceAbove ||
 					bestPrice <= absSettings.PriceBelow {
 
-					activeAlerts[tgtTkn.Symbol] = AlertMsg(tracker.TokenInfo, tgtTkn, bestPrice, absSettings.Decimals)
+					activeAlerts[tgtTkn.Symbol] = AlertMsg(tracker, tgtTkn, bestPrice, absSettings.Decimals)
 					tracker.LastSnapshot[tgtTkn.Symbol] = &t.TokenSnapshot{
 						TokenInfo: tgtTkn,
 						Price:     bestPrice,
