@@ -19,6 +19,8 @@ type LambdaResp events.APIGatewayProxyResponse
 
 type LambdaReq events.APIGatewayProxyRequest
 
+type LambdaHandlerFunc func(context.Context, *LambdaReq) (resp LambdaResp, err error)
+
 func BuildLambdaResponse(data interface{}, allowedOrigin string) (resp LambdaResp, err error) {
 	var buf bytes.Buffer
 	var body []byte

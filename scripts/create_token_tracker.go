@@ -27,6 +27,7 @@ func main() {
 	if err != nil {
 		log.Printf("Err creating store: %v\n", err)
 	}
+	userId := os.Getenv("ALERTER_DISCORD_ID")
 	client := api.NewHttpClient()
 
 	// work
@@ -42,7 +43,7 @@ func main() {
 	// sol tracker
 	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
 		TokenInfo:    tokenMap["SOL"],
-		DiscordId:    "timchi#0831",
+		DiscordId:    userId,
 		InputAmount:  1,
 		LastSnapshot: make(map[string]*t.TokenSnapshot),
 		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{
@@ -59,7 +60,7 @@ func main() {
 	// dust tracker
 	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
 		TokenInfo:    tokenMap["DUST"],
-		DiscordId:    "timchi#0831",
+		DiscordId:    userId,
 		InputAmount:  1,
 		LastSnapshot: make(map[string]*t.TokenSnapshot),
 		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{
@@ -76,7 +77,7 @@ func main() {
 	// foxy tracker
 	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
 		TokenInfo:    tokenMap["FOXY"],
-		DiscordId:    "timchi#0831",
+		DiscordId:    userId,
 		InputAmount:  1,
 		LastSnapshot: make(map[string]*t.TokenSnapshot),
 		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{

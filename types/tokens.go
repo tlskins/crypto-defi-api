@@ -30,10 +30,11 @@ type TokenSnapshot struct {
 }
 
 type LastSnapAlertSettings struct {
-	TargetToken      *TokenInfo `bson:"targetToken" json:"targetToken"`
-	Decimals         int        `bson:"decimals" json:"decimals"`
-	FixedPriceChange float64    `bson:"fixedPriceChange,omitempty" json:"fixedPriceChange,omitempty"`
-	PctPriceChange   float64    `bson:"percentPriceChange,omitempty" json:"percentPriceChange,omitempty"`
+	TargetToken             *TokenInfo `bson:"targetToken" json:"targetToken"`
+	Decimals                int        `bson:"decimals" json:"decimals"`
+	FixedPriceChange        float64    `bson:"fixedPriceChange,omitempty" json:"fixedPriceChange,omitempty"`
+	InvertedFixedPriceAlert bool       `bson:"invertedFixedPriceAlert,omitempty" json:"invertedFixedPriceAlert,omitempty"`
+	PctPriceChange          float64    `bson:"percentPriceChange,omitempty" json:"percentPriceChange,omitempty"`
 }
 
 type AbsoluteAlertSettings struct {
