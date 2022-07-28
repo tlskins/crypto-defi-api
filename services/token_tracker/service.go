@@ -103,6 +103,8 @@ func CheckTokens(
 					currBestPrice = 1 / bestPrice
 					lastBestPrice = 1 / lastPrice
 				}
+				// test alert msg
+				log.Println(pr.AlertMsg(tracker, tgtTkn, bestPrice, lastSettings.Decimals))
 				if lastSnap == nil ||
 					lastSettings.FixedPriceChange > 0 && currBestPrice >= lastBestPrice+lastSettings.FixedPriceChange ||
 					lastSettings.FixedPriceChange > 0 && currBestPrice <= lastBestPrice-lastSettings.FixedPriceChange ||
