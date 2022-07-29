@@ -27,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Printf("Err creating store: %v\n", err)
 	}
-	userId := os.Getenv("ALERTER_DISCORD_ID")
+	// userId := os.Getenv("ALERTER_DISCORD_ID")
 	client := api.NewHttpClient()
 
 	// work
@@ -40,21 +40,21 @@ func main() {
 		tokenMap[tkn.Symbol] = tkn
 	}
 
+	// get existing tracker
+	tracker, err := store.GetTokenTracker("6c1c638c-aea8-40bc-878d-e0199031614a")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// add settings
+	tracker.LastSnapAlertSettings["ETH"] = &t.LastSnapAlertSettings{
+		TargetToken:      tokenMap["ETH"],
+		Decimals:         2,
+		FixedPriceChange: 50.0,
+	}
+
 	// usdc tracker
-	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
-		TokenInfo:    tokenMap["USDC"],
-		DiscordId:    userId,
-		InputAmount:  25,
-		LastSnapshot: make(map[string]*t.TokenSnapshot),
-		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{
-			"FOXY": &t.LastSnapAlertSettings{
-				TargetToken:             tokenMap["FOXY"],
-				Decimals:                4,
-				FixedPriceChange:        25.0,
-				InvertedFixedPriceAlert: true,
-			},
-		},
-	}); err != nil {
+	if _, err := store.UpsertTokenTracker(tracker); err != nil {
 		log.Fatal(err)
 	}
 

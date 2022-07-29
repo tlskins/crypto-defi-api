@@ -40,51 +40,17 @@ func main() {
 		tokenMap[tkn.Symbol] = tkn
 	}
 
-	// sol tracker
+	// eth tracker
 	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
-		TokenInfo:    tokenMap["SOL"],
+		TokenInfo:    tokenMap["ETH"],
 		DiscordId:    userId,
-		InputAmount:  1,
+		InputAmount:  4,
 		LastSnapshot: make(map[string]*t.TokenSnapshot),
 		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{
 			"USDC": &t.LastSnapAlertSettings{
 				TargetToken:      tokenMap["USDC"],
 				Decimals:         2,
 				FixedPriceChange: 1.0,
-			},
-		},
-	}); err != nil {
-		log.Fatal(err)
-	}
-
-	// dust tracker
-	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
-		TokenInfo:    tokenMap["DUST"],
-		DiscordId:    userId,
-		InputAmount:  1,
-		LastSnapshot: make(map[string]*t.TokenSnapshot),
-		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{
-			"USDC": &t.LastSnapAlertSettings{
-				TargetToken:      tokenMap["USDC"],
-				Decimals:         2,
-				FixedPriceChange: 0.1,
-			},
-		},
-	}); err != nil {
-		log.Fatal(err)
-	}
-
-	// foxy tracker
-	if _, err := store.UpsertTokenTracker(&t.TokenTracker{
-		TokenInfo:    tokenMap["FOXY"],
-		DiscordId:    userId,
-		InputAmount:  1,
-		LastSnapshot: make(map[string]*t.TokenSnapshot),
-		LastSnapAlertSettings: map[string]*t.LastSnapAlertSettings{
-			"USDC": &t.LastSnapAlertSettings{
-				TargetToken:      tokenMap["USDC"],
-				Decimals:         4,
-				FixedPriceChange: 0.04,
 			},
 		},
 	}); err != nil {

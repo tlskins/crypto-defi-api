@@ -17,6 +17,15 @@ func (s *Store) GetTokenTrackers() (out []*t.TokenTracker, err error) {
 	return
 }
 
+func (s *Store) GetTokenTracker(id string) (out *t.TokenTracker, err error) {
+	sess, c := s.C(colTokenTrackers)
+	defer sess.Close()
+
+	out = &t.TokenTracker{}
+	err = api.FindOne(c, out, api.M{"_id": id})
+	return
+}
+
 func (s *Store) GetTokenTrackersByDiscordId(discId string) (out []*t.TokenTracker, err error) {
 	sess, c := s.C(colTokenTrackers)
 	defer sess.Close()

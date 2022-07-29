@@ -53,27 +53,29 @@ func CheckTokens(
 		for outTkn, outQuote := range outMap {
 			for inputAmount := range outQuote {
 				wg.Add(1)
-				go func(inTkn, outTkn *t.TokenInfo, inputAmount int, outQuote *map[int]float64) {
+				go func(inTkn, outTkn *t.TokenInfo, inputAmount int, quotes *map[*t.TokenInfo]map[*t.TokenInfo]map[int]float64) {
 					defer wg.Done()
 					log.Printf("Quoting %s to %s\n", inTkn.Symbol, outTkn.Symbol)
 					params := map[string]string{
 						"inputMint":  inTkn.Address,
 						"outputMint": outTkn.Address,
 						"amount":     fmt.Sprintf("%.0f", float64(inputAmount)*math.Pow(10, float64(inTkn.Decimals))),
-						"slippage":   "0.2",
+						"slippage":   "0.35",
 					}
 					out := &t.JupResp{}
 					if sErr := api.HttpGetRequest(client, "GET", "https://quote-api.jup.ag/v1/quote", nil, params, out); sErr != nil {
 						spew.Dump(sErr)
 					} else {
-						(*outQuote)[inputAmount] = out.BestQuote().Price(outTkn)
-						log.Printf("Quoted: %v %s @ %f %s\n", inputAmount, inTkn.Symbol, (*outQuote)[inputAmount], outTkn.Symbol)
+						bestPrice := out.BestQuote().Price(outTkn)
+						(*quotes)[inTkn][outTkn][inputAmount] = bestPrice
+						log.Printf("Quoted: %v %s @ %f %s\n", inputAmount, inTkn.Symbol, bestPrice, outTkn.Symbol)
 					}
-				}(inTkn, outTkn, inputAmount, &outQuote)
+				}(inTkn, outTkn, inputAmount, &quotes)
 			}
 		}
 	}
 	wg.Wait()
+	spew.Dump(quotes)
 
 	log.Println("Checking against alerts...")
 	// check quotes against alerts
@@ -92,6 +94,9 @@ func CheckTokens(
 				lastPrice = lastSnap.Price
 			}
 			bestPrice := quotes[tracker.TokenInfo][tgtTkn][tracker.InputAmount]
+			bestPrice = bestPrice / float64(tracker.InputAmount)
+			log.Printf("lastPrice: %v\n", lastPrice)
+			log.Printf("bestPrice: %v\n", bestPrice)
 
 			// check quote against last snap settings
 			lastSettings := tracker.LastSnapAlertSettings[tgtTkn.Symbol]
@@ -139,6 +144,8 @@ func CheckTokens(
 				}
 			}
 		}
+
+		spew.Dump("Active Alerts:", activeAlerts)
 
 		if sendAlerts {
 			// send alert dms
